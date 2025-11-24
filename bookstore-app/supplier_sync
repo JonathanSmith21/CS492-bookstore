@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventory + Supplier Sync</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+    th { background: #f4f4f4; }
+    .status-in  { color: green;  font-weight: bold; }
+    .status-low { color: orange; font-weight: bold; }
+    .status-out { color: red;    font-weight: bold; }
+    button { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Inventory + Supplier Integration</h1>
+
+  <p>
+    <button id="manualSyncBtn">Run Supplier Sync (Manual)</button>
+  </p>
+  <p><small>Note: There is also an automatic sync running every 30 seconds.</small></p>
+
+  <h2>Books</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>ISBN</th>
+        <th>Quantity</th>
+        <th>Availability</th>
+        <th>Suppliers</th>
+      </tr>
+    </thead>
+    <tbody id="bookTableBody"></tbody>
+  </table>
+
+  <script>
+    // --- Domain Models ---------------------------------------
+
+    // Books in local inventory
+    let books = [
+      { id: 1, title: "Sample Book A", isbn: "111-A", quantity: 2,  reorderPoint: 5, supplierIds: [1, 2] },
+      { id: 2, title: "Sample Book B", isbn: "222-B", quantity: 10, reorderPoint: 5, supplierIds: [2] },
+      { id: 3, title: "Sample Book C", isbn: "333-C", quantity: 0,  reorderPoint: 5, supplierIds: [1] }
+    ];
+
+    // Supplier master data
+    const suppliers = [
+      { id: 1, name: "Alpha Books" },
+      { id: 2, name: "Omega Publishing" }
+    ];
+
+    // --- Availability Logic ----------------------------------
+
+    function getAvailabilityStatus(book) {
+      if (book.quantity <= 0)   return { label: "Out of Stock", css: "status-out" };
+      if (book.quantity < book.reorderPoint) return { label: "Low Stock", css: "status-low" };
+      return { label: "In Stock", css: "status-in" };
+    }
+
+    // --- Rendering -------------------------------------------
+
+    const bookTableBody = document.getElementById("bookTableBody");
+
+    function renderBooks() {
+      bookTableBody.innerHTML = "";
+      books.forEach(book => {
+        const tr = document.createElement("tr");
+        const status = getAvailabilityStatus(book);
+        const supplierNames = book.supplierIds
+          .map(id => suppliers.find(s => s.id === id)?.name || "Unknown")
+          .join(", ");
+
+        tr.innerHTML = `
+          <td>${book.title}</td>
+          <td>${book.isbn}</td>
+          <td>${book.quantity}</td>
+          <td class="${status.css}">${status.label}</td>
+          <td>${supplierNames}</td>
+        `;
+        bookTableBody.appendChild(tr);
+      });
+    }
+
+    // --- Supplier Sync Simulation ----------------------------
+    // In a real app, this would be a `fetch()` call to a supplier API.
+
+    function fetchSupplierFeedMock() {
+      // Simulate supplier stock / shipments by ISBN
+      // You could imagine this is an API JSON payload.
+      return [
+        { supplierId: 1, isbn: "111-A", shippedQty: 5 },
+        { supplierId: 1, isbn: "333-C", shippedQty: 7 },
+        { supplierId: 2, isbn: "222-B", shippedQty: 3 }
+      ];
+    }
+
+    // Integrate supplier data: connect suppliers to titles & update stock
+    function runSupplierSync() {
+      console.log("Running supplier sync...");
+      const feed = fetchSupplierFeedMock();
+
+      feed.forEach(entry => {
+        const { supplierId, isbn, shippedQty } = entry;
+
+        // Find the local book by ISBN
+        const book = books.find(b => b.isbn === isbn);
+        if (!book) return; // Unknown ISBN in our catalog; ignore
+
+        // Ensure the supplier is linked to this book (connect suppliers to titles)
+        if (!book.supplierIds.includes(supplierId)) {
+          book.supplierIds.push(supplierId);
+        }
+
+        // Update availability: add shipped quantity to local stock
+        book.quantity += shippedQty;
+      });
+
+      // After updating domain data, re-render UI for instant sync
+      renderBooks();
+    }
+
+    // --- Automation (Manual + Automatic Sync) ----------------
+
+    const manualSyncBtn = document.getElementById("manualSyncBtn");
+    manualSyncBtn.addEventListener("click", runSupplierSync);
+
+    // Automated sync every 30 seconds (can be adjusted)
+    setInterval(runSupplierSync, 30000);
+
+    // Initial render
+    renderBooks();
+  </script>
+</body>
+</html>
