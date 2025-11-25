@@ -6,7 +6,7 @@ body {
 }
 
 header {
-    background: #35424a;
+    background: #1a1f22;
     color: #ffffff;
     padding: 10px 0;
     text-align: center;
@@ -23,7 +23,7 @@ h1 {
 }
 
 nav {
-    background: #35424a;
+    background: #1a1f22;
     color: #ffffff;
     padding: 10px;
     text-align: left;
@@ -54,16 +54,11 @@ button{
 button:hover {
     background-color: #1a1f22;
     color: white;
+    text-decoration: solid underline;
 }
-  
-
-
-
-
-
 
 .button {
-    background-color: #35424a;
+    background-color: #1a1f22;
     color: white;
     padding: 10px 15px;
     border: none;
@@ -74,4 +69,13 @@ button:hover {
 .button:hover {
     text-decoration: underline;
 }
+
+/* Login card styles */
+.login-card { max-width: 420px; margin: 2rem auto; padding: 1.25rem; background: white; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.login-card label { display: block; margin: 0.6rem 0; text-align: left; }
+.login-card input { width: 100%; padding: 8px; box-sizing: border-box; margin-top: 6px; }
+.login-card h2 { margin-top: 0; }
+.row.actions { display: flex; gap: 8px; justify-content: center; align-items: center; margin-top: 12px; }
+.error { color: #b00020; margin-top: 8px; }
+.muted { color: #666; font-size: 0.9rem; }
 

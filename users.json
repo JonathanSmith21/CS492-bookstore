@@ -1,0 +1,12 @@
+{
+  "admin": {
+    "username": "admin",
+    "display": "Administrator",
+    "passwordHash": "$2a$10$T3S3079Oo3oaU8hpmDeqIeyvj4ywBsIC.97GWSGIcMv1hznbeMEhS"
+  },
+  "hisss": {
+    "username": "hisss",
+    "display": "hisss",
+    "passwordHash": "$2a$10$qlVp3GnS.Tl.sfOU6uGqpuYOwo8peUqudS9hIHeJJgrYOxR0WB3VW"
+  }
+}
