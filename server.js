@@ -1,109 +1,420 @@
-const path = require('path');
+// --- Express app, sessions, routes, MFA, RBAC, inventory CRUD, supplier sync, cart. --- //
+// server.js
+
 const express = require('express');
 const session = require('express-session');
-const bcrypt = require('bcryptjs');
 const morgan = require('morgan');
+const path = require('path');
+
+const {
+  db,
+  ROLES,
+  seed,
+  getUserByEmail,
+  getUserById,
+  createUser,
+  listUsers,
+  updateUserRole,
+  listBooks,
+  createBook,
+  updateBook,
+  deleteBook,
+  listSuppliers,
+  simulateSupplierFeed,
+  applySupplierFeed,
+  // cart helpers
+  getCart,
+  setCart,
+  addToCart,
+  updateCartItem,
+  removeFromCart,
+  clearCart,
+  getCartWithDetails,
+  // order helpers
+  createOrder,
+  listOrdersByUser,
+  listAllOrders
+} = require('./db');
+
+
+const { authenticate, generateMfaCode } = require('./auth');
+const { requireAuth, requireRole } = require('./rbac');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
-const fs = require('fs');
-// users persisted to users.json for demo
-const usersFile = path.join(__dirname, 'users.json');
-
-function loadUsers(){
-  try{
-    if(fs.existsSync(usersFile)){
-      const raw = fs.readFileSync(usersFile, 'utf8');
-      return JSON.parse(raw);
-    }
-  }catch(e){ console.error('Failed loading users.json', e); }
-  // default admin user if no file
-  return {
-    admin: { username: 'admin', display: 'Administrator', passwordHash: bcrypt.hashSync('password', 10) }
-  };
-}
-
-function saveUsers(users){
-  try{
-    fs.writeFileSync(usersFile, JSON.stringify(users, null, 2), { encoding: 'utf8' });
-    return true;
-  }catch(e){ console.error('Failed saving users.json', e); return false; }
-}
-
-// load or create users
-const users = loadUsers();
-// ensure users.json exists
-saveUsers(users);
-
+// Logging + parsing
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { httpOnly: true }
-}));
+// Sessions
+app.use(
+  session({
+    secret: 'cs492-bookstore-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      // secure: true, // enable when using HTTPS
+      maxAge: 1000 * 60 * 60 // 1 hour
+    }
+  })
+);
 
-// Serve static frontend
-const staticDir = path.join(__dirname, 'bookstore-app');
-app.use(express.static(staticDir));
+// Static front-end
+app.use(express.static(path.join(__dirname, 'public')));
 
-// API: login
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.status(400).json({ error: 'Missing credentials' });
-  const user = users[username];
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-  const ok = bcrypt.compareSync(password, user.passwordHash);
-  if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
-  // store minimal session
-  req.session.user = { username: user.username, display: user.display };
-  return res.json({ ok: true, user: req.session.user });
-});
+// Seed initial data
+seed();
 
-// API: register
-app.post('/api/register', (req, res) => {
-  const { username, password, display } = req.body || {};
-  if(!username || !password) return res.status(400).json({ error: 'Missing username or password' });
-  const uname = String(username).trim();
-  if(!/^[A-Za-z0-9_\-]{3,32}$/.test(uname)){
-    return res.status(400).json({ error: 'Username must be 3-32 chars and contain only letters, numbers, - or _' });
+// ----------------------
+// Auth / User Endpoints
+// ----------------------
+
+// Current user
+app.get('/api/me', (req, res) => {
+  if (!req.session.user) return res.json(null);
+  const user = getUserById(req.session.user.id);
+  if (!user) {
+    req.session.destroy(() => {});
+    return res.json(null);
   }
-  if(users[uname]) return res.status(409).json({ error: 'Username already exists' });
-  const hashed = bcrypt.hashSync(String(password), 10);
-  users[uname] = { username: uname, display: display ? String(display) : uname, passwordHash: hashed };
-  const ok = saveUsers(users);
-  if(!ok) return res.status(500).json({ error: 'Unable to save user' });
-  return res.json({ ok: true, user: { username: uname, display: users[uname].display } });
-});
-
-// API: logout
-app.post('/api/logout', (req, res) => {
-  req.session.destroy(err => {
-    if (err) return res.status(500).json({ error: 'Unable to logout' });
-    res.clearCookie('connect.sid');
-    return res.json({ ok: true });
+  res.json({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    mfaVerified: !!req.session.mfaVerified
   });
 });
 
-// API: session info
-app.get('/api/session', (req, res) => {
-  if (req.session && req.session.user) {
-    return res.json({ user: req.session.user });
+// Register (creates Sales Clerk by default)
+app.post('/api/register', (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password || password.length < 8) {
+      return res.status(400).json({
+        error: 'Email and password (min 8 chars) required.'
+      });
+    }
+    const user = createUser({
+      email,
+      password,
+      role: ROLES.SALES_CLERK
+    });
+    res.json({ id: user.id, email: user.email, role: user.role });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
-  return res.json({ user: null });
 });
 
-// Example protected API
-app.get('/api/protected', (req, res) => {
-  if (!req.session || !req.session.user) return res.status(401).json({ error: 'Unauthorized' });
-  res.json({ message: `Hello ${req.session.user.display}, this is protected data.` });
+// Login (step 1: password, maybe MFA)
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  const user = await authenticate(email, password);
+  if (!user) {
+    return res.status(400).json({ error: 'Invalid credentials.' });
+  }
+
+  // MFA for system admins
+  if (user.role === ROLES.SYSTEM_ADMIN && user.mfaEnabled) {
+    const code = generateMfaCode();
+    user.mfaCode = code;
+    // In a real system, you would email/SMS this.
+    // For this demo, log it so it can be tested:
+    console.log(`MFA code for admin ${user.email}: ${code}`);
+    req.session.pendingUserId = user.id;
+    return res.json({
+      mfaRequired: true,
+      message: 'MFA required. Code sent (see server console in this demo).'
+    });
+  }
+
+  // Normal login (no MFA)
+  req.session.user = { id: user.id, email: user.email, role: user.role };
+  req.session.mfaVerified = true;
+  res.json({
+    mfaRequired: false,
+    user: { id: user.id, email: user.email, role: user.role }
+  });
 });
 
+// Login MFA (step 2 for admins)
+app.post('/api/login/mfa', (req, res) => {
+  const { code } = req.body;
+  const pendingId = req.session.pendingUserId;
+  if (!pendingId) return res.status(400).json({ error: 'No MFA pending.' });
+
+  const user = getUserById(pendingId);
+  if (!user || !user.mfaCode) {
+    return res.status(400).json({ error: 'Invalid MFA state.' });
+  }
+
+  if (user.mfaCode !== code) {
+    return res.status(400).json({ error: 'Invalid MFA code.' });
+  }
+
+  user.mfaCode = null;
+  req.session.pendingUserId = null;
+  req.session.user = { id: user.id, email: user.email, role: user.role };
+  req.session.mfaVerified = true;
+
+  res.json({ success: true, user: { email: user.email, role: user.role } });
+});
+
+// Logout
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(() => {});
+  res.json({ success: true });
+});
+
+// -------------------------
+// CART ROUTES (per user)
+// -------------------------
+
+// Get cart with details (titles, prices, totals)
+app.get('/api/cart', requireAuth, (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const cart = getCartWithDetails(userId);
+    res.json(cart);
+  } catch (err) {
+    console.error('Error getting cart:', err);
+    res.status(500).json({ error: 'Failed to load cart' });
+  }
+});
+
+// Add item to cart (or increase quantity)
+app.post('/api/cart/add', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  const { bookId, quantity } = req.body;
+
+  if (!bookId) {
+    return res.status(400).json({ error: 'bookId is required' });
+  }
+
+  try {
+    addToCart(userId, bookId, quantity || 1);
+    const cart = getCartWithDetails(userId);
+    res.json(cart);
+  } catch (err) {
+    console.error('Error adding to cart:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Update quantity for one item
+app.post('/api/cart/update', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  const { bookId, quantity } = req.body;
+
+  if (!bookId) {
+    return res.status(400).json({ error: 'bookId is required' });
+  }
+
+  try {
+    updateCartItem(userId, bookId, quantity);
+    const cart = getCartWithDetails(userId);
+    res.json(cart);
+  } catch (err) {
+    console.error('Error updating cart item:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Remove an item from cart
+app.post('/api/cart/remove', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  const { bookId } = req.body;
+
+  if (!bookId) {
+    return res.status(400).json({ error: 'bookId is required' });
+  }
+
+  try {
+    removeFromCart(userId, bookId);
+    const cart = getCartWithDetails(userId);
+    res.json(cart);
+  } catch (err) {
+    console.error('Error removing cart item:', err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// -------------------------
+// Checkout + Invoices
+// -------------------------
+
+// POST /api/checkout
+// Uses current user's cart, simulates payment, creates an order, clears cart, and returns invoice.
+app.post('/api/checkout', requireAuth, (req, res) => {
+  const userId = req.session.user.id;
+  const { paymentMethod } = req.body || {};
+
+  try {
+    const { items, cartTotal } = getCartWithDetails(userId);
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ error: 'Cart is empty. Cannot checkout.' });
+    }
+
+    // ---- Payment simulation ----
+    // For now, always "succeeds". You could add logic here to simulate failures.
+    const simulatedPaymentMethod = paymentMethod || 'CARD_SIM';
+    const paymentStatus = 'APPROVED';
+
+    // Create order / invoice
+    const order = createOrder({
+      userId,
+      items,
+      cartTotal,
+      paymentMethod: simulatedPaymentMethod
+    });
+
+    // Clear cart after successful order
+    clearCart(userId);
+
+    // Return "invoice"
+    res.json({
+      success: true,
+      message: 'Order placed successfully.',
+      paymentStatus,
+      invoice: {
+        orderId: order.id,
+        transactionId: order.transactionId,
+        items: order.items,
+        totalAmount: order.totalAmount,
+        paymentMethod: order.paymentMethod,
+        createdAt: order.createdAt
+      }
+    });
+  } catch (err) {
+    console.error('Error during checkout:', err);
+    res.status(500).json({ error: 'Checkout failed.' });
+  }
+});
+
+// GET /api/orders/my
+// Returns list of orders for the currently-logged-in user
+app.get('/api/orders/my', requireAuth, (req, res) => {
+  try {
+    const userId = req.session.user.id;
+    const orders = listOrdersByUser(userId);
+    res.json(orders);
+  } catch (err) {
+    console.error('Error loading orders:', err);
+    res.status(500).json({ error: 'Failed to load orders.' });
+  }
+});
+
+
+// -------------------------
+// Inventory CRUD
+// -------------------------
+
+app.get(
+  '/api/books',
+  requireRole(ROLES.STORE_OWNER, ROLES.SALES_CLERK, ROLES.SYSTEM_ADMIN),
+  (req, res) => {
+    res.json(listBooks());
+  }
+);
+
+app.post(
+  '/api/books',
+  requireRole(ROLES.STORE_OWNER, ROLES.SALES_CLERK, ROLES.SYSTEM_ADMIN),
+  (req, res) => {
+    try {
+      const { title, author, isbn, price, quantity } = req.body;
+      if (!title || !author || !isbn) {
+        return res.status(400).json({
+          error: 'Title, author, and ISBN are required.'
+        });
+      }
+      const book = createBook({ title, author, isbn, price, quantity });
+      res.json(book);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+
+app.put(
+  '/api/books/:id',
+  requireRole(ROLES.STORE_OWNER, ROLES.SALES_CLERK, ROLES.SYSTEM_ADMIN),
+  (req, res) => {
+    try {
+      const { title, author, isbn, price, quantity } = req.body;
+      const book = updateBook(req.params.id, {
+        title,
+        author,
+        isbn,
+        price,
+        quantity
+      });
+      res.json(book);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+
+app.delete(
+  '/api/books/:id',
+  requireRole(ROLES.STORE_OWNER, ROLES.SALES_CLERK, ROLES.SYSTEM_ADMIN),
+  (req, res) => {
+    deleteBook(req.params.id);
+    res.json({ success: true });
+  }
+);
+
+// -------------------------
+// Admin Role Management
+// -------------------------
+
+app.get('/api/users', requireRole(ROLES.SYSTEM_ADMIN), (req, res) => {
+  res.json(listUsers());
+});
+
+app.put('/api/users/:id/role', requireRole(ROLES.SYSTEM_ADMIN), (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!Object.values(ROLES).includes(role)) {
+      return res.status(400).json({ error: 'Invalid role.' });
+    }
+    const user = updateUserRole(req.params.id, role);
+    res.json({ id: user.id, email: user.email, role: user.role });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// -------------------------
+// Supplier Integration
+// -------------------------
+
+app.get(
+  '/api/suppliers',
+  requireRole(ROLES.STORE_OWNER, ROLES.SALES_CLERK, ROLES.SYSTEM_ADMIN),
+  (req, res) => {
+    res.json(listSuppliers());
+  }
+);
+
+app.post('/api/suppliers/sync', requireRole(ROLES.SYSTEM_ADMIN), (req, res) => {
+  const feed = simulateSupplierFeed();
+  applySupplierFeed(feed);
+  res.json({ success: true, feed });
+});
+
+// -------------------------
+// Start server
+// -------------------------
+
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Serving static files from ${staticDir}`);
+  console.log(`CS492 Bookstore server running on http://localhost:${PORT}`);
+  console.log('Seeded users:');
+  console.log('  Store Owner: owner@bms.com / Owner123!');
+  console.log('  Sales Clerk: clerk@bms.com / Clerk123!');
+  console.log('  System Admin (MFA): admin@bms.com / Admin123!');
 });
