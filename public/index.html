@@ -1,0 +1,229 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2685.2">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html lang="en"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;meta charset="utf-8" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;title&gt;Bookstore Management System&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;link rel="stylesheet" href="styles.css" /&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;header&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h1&gt;Bookstore Management System&lt;/h1&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;nav&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;a href="#auth-section"&gt;Auth&lt;/a&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;a href="#inventory-section"&gt;Inventory&lt;/a&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;a href="#admin-section"&gt;Admin&lt;/a&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;a href="#cart-checkout-section"&gt;Cart &amp;amp; Checkout&lt;/a&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/nav&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>Current User:</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;strong id="currentUser"&gt;Not logged in&lt;/strong&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button id="logoutBtn" class="hidden"&gt;Logout&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/header&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- ========== AUTHENTICATION ========== --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;section id="auth-section"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;Authentication&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="authMessage" class="message"&gt;&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Register (Customer)&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Email:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="email" id="regEmail" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Password (min 8 chars):</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="password" id="regPassword" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button id="registerBtn"&gt;Register&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Login&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Email:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="email" id="loginEmail" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Password:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="password" id="loginPassword" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button id="loginBtn"&gt;Login&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="mfaBox" class="hidden" style="margin-top:10px;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;h4&gt;MFA Required (Admin Only)&lt;/h4&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;p&gt;Check the server console for the MFA code in this demo.&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>MFA Code:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="text" id="mfaCode" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button id="mfaBtn"&gt;Verify MFA&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;pre style="margin-top: 15px;"&gt;</p>
+<p class="p1">Seeded users:</p>
+<p class="p1"><span class="Apple-converted-space">  </span>Store Owner: owner@bms.com / Owner123!</p>
+<p class="p1"><span class="Apple-converted-space">  </span>Sales Clerk: clerk@bms.com / Clerk123!</p>
+<p class="p1"><span class="Apple-converted-space">  </span>System Admin (MFA): admin@bms.com / Admin123!</p>
+<p class="p1"><span class="Apple-converted-space">  </span>Customer: customer@bms.com / Customer123!</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/pre&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/section&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- ========== INVENTORY (Owner/Clerk/Admin) ========== --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;section id="inventory-section" class="hidden"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;Inventory&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="invMessage" class="message"&gt;&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Add / Update Book&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Title:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="text" id="bookTitle" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Author:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="text" id="bookAuthor" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>ISBN:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="text" id="bookIsbn" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Price:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="number" id="bookPrice" step="0.01" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Quantity:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;input type="number" id="bookQty" /&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button id="addBookBtn"&gt;Add / Update Book&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Current Inventory&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Title&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Author&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;ISBN&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Price&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Quantity&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;tbody id="booksTableBody"&gt;&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/section&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- ========== ADMIN (System Admin only) ========== --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;section id="admin-section" class="hidden"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;Admin &amp;amp; Security&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="adminMessage" class="message"&gt;&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;User Management (RBAC)&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Email&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Current Role&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Change Role&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;tbody id="usersTableBody"&gt;&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/table&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Supplier Integration&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;button id="manualSyncBtn"&gt;Run Supplier Sync (Manual)&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p&gt;&lt;small&gt;Automatic sync is simulated periodically on the server.&lt;/small&gt;&lt;/p&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/section&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;!-- ========== CART &amp; CHECKOUT ========== --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;section id="cart-checkout-section"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h2&gt;Customer Cart &amp;amp; Checkout&lt;/h2&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Browse Books&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button id="cc-load-books-btn"&gt;Load Available Books&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;div id="cc-books-message" class="message"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;th&gt;Title&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;th&gt;Author&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;th&gt;Price&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;th&gt;In Stock&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;th&gt;Add&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;tbody id="cc-books-tbody"&gt;&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Your Cart&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="cc-cart-message" class="message"&gt;&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Title&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Unit Price&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Quantity&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Line Total&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Remove&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;tbody id="cc-cart-tbody"&gt;&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;p id="cc-cart-total"&gt;Cart Total: $0.00&lt;/p&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Checkout&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;form id="cc-checkout-form"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>Payment Method:</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;select id="cc-payment-method"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;option value="creditCard"&gt;Credit Card&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;option value="debitCard"&gt;Debit Card&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;option value="cash"&gt;Cash&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/select&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;button type="submit"&gt;Complete Checkout&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/form&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div id="cc-checkout-message" class="message"&gt;&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Invoice&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;pre id="cc-invoice-display"&gt;&lt;/pre&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h3&gt;Order History&lt;/h3&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;button id="cc-load-orders-btn"&gt;Load My Orders&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Order #&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Date&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Total&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">          </span>&lt;th&gt;Payment&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">      </span>&lt;tbody id="cc-orders-tbody"&gt;&lt;/tbody&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;/section&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">  </span>&lt;script src="app.js"&gt;&lt;/script&gt;</p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
+</body>
+</html>
