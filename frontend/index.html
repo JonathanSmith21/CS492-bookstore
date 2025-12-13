@@ -29,7 +29,7 @@
 
   <div id="app-panel" style="display:none">
     <header>
-      <h1>Simple Bookstore</h1>
+      <h1>Bookstore Management System</h1>
       <nav>
         <button id="tab-shop" class="active">Shop</button>
         <button id="tab-orders">Orders</button>
@@ -41,11 +41,24 @@
     <main>
 
       <section id="shop" class="tab">
-        <div style="margin-bottom:16px">
-          <input type="text" id="search-bar" placeholder="Search books..." style="width:60%;padding:6px 10px;border-radius:6px;border:1px solid #ccc">
+        <div class="shop-content">
+          <div style="margin-bottom:16px">
+            <input type="text" id="search-bar" placeholder="Search books..." style="width:60%;padding:6px 10px;border-radius:6px;border:1px solid #ccc">
+          </div>
+          <div class="products" id="products"></div>
+          <div id="search-results" style="margin-top:12px"></div>
+          <div id="admin-books-panel" style="display:none;margin-top:24px;padding:16px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #0001;max-width:400px">
+            <h3>Manage Books (Admin)</h3>
+            <form id="add-book-form" style="margin-bottom:12px">
+              <input type="text" id="book-title" placeholder="Title" required style="width:32%"> 
+              <input type="text" id="book-isbn" placeholder="ISBN" style="width:24%"> 
+              <input type="number" id="book-price" placeholder="Price" required min="0" step="0.01" style="width:20%"> 
+              <input type="text" id="book-desc" placeholder="Description" style="width:20%"> 
+              <button type="submit">Add Book</button>
+            </form>
+            <div id="admin-books-list"></div>
+          </div>
         </div>
-        <div class="products" id="products"></div>
-        <div id="search-results" style="margin-top:12px"></div>
         <aside class="cart">
           <h3>Cart</h3>
           <div id="cart-items"></div>
@@ -54,17 +67,6 @@
             <button id="checkout-btn">Checkout</button>
           </div>
         </aside>
-        <div id="admin-books-panel" style="display:none;margin-top:24px;padding:16px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #0001;max-width:400px">
-          <h3>Manage Books (Admin)</h3>
-          <form id="add-book-form" style="margin-bottom:12px">
-            <input type="text" id="book-title" placeholder="Title" required style="width:32%"> 
-            <input type="text" id="book-isbn" placeholder="ISBN" style="width:24%"> 
-            <input type="number" id="book-price" placeholder="Price" required min="0" step="0.01" style="width:20%"> 
-            <input type="text" id="book-desc" placeholder="Description" style="width:20%"> 
-            <button type="submit">Add Book</button>
-          </form>
-          <div id="admin-books-list"></div>
-        </div>
       </section>
 
       <section id="orders" class="tab" style="display:none">
@@ -106,7 +108,7 @@
       <h3>Checkout</h3>
       <div id="order-summary"></div>
       <div class="modal-actions">
-        <button id="pay-btn">Pay (simulate)</button>
+        <button id="pay-btn">Pay</button>
         <button id="cancel-pay">Cancel</button>
       </div>
     </div>

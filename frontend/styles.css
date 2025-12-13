@@ -1,7 +1,20 @@
 :root {
-  --accent: #2b7a78;
+  --accent: #3E5641;
   --bg: #f6f7f9;
   --card: #ffffff;
+}
+
+button {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #444444;
 }
 
 * {
@@ -35,6 +48,7 @@ nav button {
   border: 0;
   background: transparent;
   cursor: pointer;
+  color:#111
 }
 
 nav button.active {
@@ -43,17 +57,34 @@ nav button.active {
   border-radius: 6px;
 }
 
+nav button:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
 main {
   display: flex;
   gap: 16px;
   padding: 18px;
+  margin: 0 auto;
+  max-width: 1400px;
+  width: 100%;
+}
+
+#shop {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.shop-content {
+  flex: 1;
 }
 
 .products {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
-  flex: 1;
 }
 
 .product {
@@ -98,11 +129,14 @@ main {
 }
 
 .cart {
+  display: flex;
+  flex-direction: column;
   width: 320px;
   background: var(--card);
   padding: 12px;
   border-radius: 8px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  flex-shrink: 0;
 }
 
 #cart-items {
@@ -135,6 +169,10 @@ main {
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.cart-footer button:hover {
+  background: #444444;
 }
 
 .modal {
