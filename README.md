@@ -1,7 +1,7 @@
 Bookstore Management System
 Full-Stack Application with Authentication, MFA, Role-Based Access, Inventory CRUD, and Supplier Sync
 
-Backend: Node.js + Express Frontend: HTML / CSS / JavaScript Security Features: Password hashing, sessions, MFA, RBAC, HTTPS-ready
+Backend: Node.js + ExpressFrontend: HTML / CSS / JavaScriptSecurity Features: Password hashing, sessions, MFA, RBAC, HTTPS-ready
 CS492_GP2.ZIP/
 │
 ├── server.js           # Express web server

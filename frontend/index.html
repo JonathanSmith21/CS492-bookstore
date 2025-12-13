@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bookstore Management System</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div id="login-panel" style="max-width:340px;margin:48px auto;padding:24px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #0001;">
+    <h2>Login</h2>
+    <form id="login-form">
+      <label>Username<br><input type="text" id="login-username" required></label><br><br>
+      <label>Password<br><input type="password" id="login-password" required></label><br><br>
+      <button type="submit">Login</button>
+    </form>
+    <div id="login-error" style="color:#b00;margin-top:12px;display:none"></div>
+    <hr style="margin:24px 0;">
+    <h3>Register</h3>
+    <form id="register-form">
+      <label>Username<br><input type="text" id="register-username" required></label><br><br>
+      <label>Password<br><input type="password" id="register-password" required></label><br><br>
+      <label>Confirm Password<br><input type="password" id="register-confirm" required></label><br><br>
+      <button type="submit">Register</button>
+    </form>
+    <div id="register-error" style="color:#b00;margin-top:12px;display:none"></div>
+  </div>
+
+  <div id="app-panel" style="display:none">
+    <header>
+      <h1>Simple Bookstore</h1>
+      <nav>
+        <button id="tab-shop" class="active">Shop</button>
+        <button id="tab-orders">Orders</button>
+        <button id="tab-reports">Reports</button>
+        <button id="logout-btn" style="float:right">Logout</button>
+      </nav>
+    </header>
+
+    <main>
+
+      <section id="shop" class="tab">
+        <div style="margin-bottom:16px">
+          <input type="text" id="search-bar" placeholder="Search books..." style="width:60%;padding:6px 10px;border-radius:6px;border:1px solid #ccc">
+        </div>
+        <div class="products" id="products"></div>
+        <div id="search-results" style="margin-top:12px"></div>
+        <aside class="cart">
+          <h3>Cart</h3>
+          <div id="cart-items"></div>
+          <div class="cart-footer">
+            <div>Total: $<span id="cart-total">0.00</span></div>
+            <button id="checkout-btn">Checkout</button>
+          </div>
+        </aside>
+        <div id="admin-books-panel" style="display:none;margin-top:24px;padding:16px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #0001;max-width:400px">
+          <h3>Manage Books (Admin)</h3>
+          <form id="add-book-form" style="margin-bottom:12px">
+            <input type="text" id="book-title" placeholder="Title" required style="width:32%"> 
+            <input type="text" id="book-isbn" placeholder="ISBN" style="width:24%"> 
+            <input type="number" id="book-price" placeholder="Price" required min="0" step="0.01" style="width:20%"> 
+            <input type="text" id="book-desc" placeholder="Description" style="width:20%"> 
+            <button type="submit">Add Book</button>
+          </form>
+          <div id="admin-books-list"></div>
+        </div>
+      </section>
+
+      <section id="orders" class="tab" style="display:none">
+        <h2>Your Orders</h2>
+        <div id="orders-list"></div>
+        <div style="margin-top:12px">
+          <button id="export-orders-csv">Export Orders CSV</button>
+          <button id="clear-orders">Clear Orders</button>
+        </div>
+      </section>
+
+      <section id="reports" class="tab" style="display:none">
+        <h2>Daily Sales Report</h2>
+        <label>Date: <input type="date" id="report-date"></label>
+        <button id="run-report">Run</button>
+        <div id="report-results" style="margin-top:12px"></div>
+        <div style="margin-top:12px">
+          <button id="export-report-csv">Export Report CSV</button>
+          <button id="print-report">Print Report</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <template id="product-template">
+    <div class="product">
+      <img src="" alt=""/>
+      <div class="meta">
+        <h4></h4>
+        <p class="price"></p>
+        <p class="desc"></p>
+        <button class="add-btn">Add to cart</button>
+      </div>
+    </div>
+  </template>
+
+  <div id="checkout-modal" class="modal" style="display:none">
+    <div class="modal-content">
+      <h3>Checkout</h3>
+      <div id="order-summary"></div>
+      <div class="modal-actions">
+        <button id="pay-btn">Pay (simulate)</button>
+        <button id="cancel-pay">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

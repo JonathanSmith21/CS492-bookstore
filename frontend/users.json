@@ -1,0 +1,4 @@
+[
+  { "username": "admin", "password": "password123", "admin": true },
+  { "username": "client", "password": "letmein" }
+]
