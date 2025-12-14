@@ -1,0 +1,188 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password_hash": "$2b$10$mBwZhsNzumacSo0YVSflCuggAKziucVrmdFqtZ4CbVsP4ujjw.JB6",
+      "role": "admin",
+      "mfa_enabled": 0,
+      "mfa_secret": null,
+      "created_at": "2025-12-14T19:04:42.276Z"
+    },
+    {
+      "id": 2,
+      "username": "jonathan",
+      "role": "user",
+      "mfa_enabled": 0,
+      "mfa_secret": null,
+      "created_at": "2025-12-14T19:21:48.385Z"
+    }
+  ],
+  "inventory": [
+    {
+      "id": 1,
+      "title": "Lord of the Rings",
+      "isbn": "978-0201616224",
+      "description": "A classic fantasy novel",
+      "price": 29.99,
+      "stock": 9
+    },
+    {
+      "id": 2,
+      "title": "Dracula",
+      "isbn": "978-1593279509",
+      "description": "A gothic horror novel",
+      "price": 24.5,
+      "stock": 4
+    },
+    {
+      "id": 3,
+      "title": "Tom Sayer",
+      "isbn": "978-1491904244",
+      "description": "Adventures of a young boy",
+      "price": 19,
+      "stock": 5
+    },
+    {
+      "id": 4,
+      "title": "The Hobbit",
+      "isbn": "978-0132350884",
+      "description": "A fantasy adventure novel",
+      "price": 32,
+      "stock": 3
+    },
+    {
+      "id": 5,
+      "title": "book 1",
+      "isbn": "",
+      "description": "",
+      "price": 23,
+      "stock": 0
+    },
+    {
+      "id": 6,
+      "title": "book 12",
+      "isbn": "",
+      "description": "",
+      "price": 34,
+      "stock": 0
+    },
+    {
+      "id": 7,
+      "title": "lord of the rings",
+      "isbn": "",
+      "description": "",
+      "price": 23,
+      "stock": 0
+    },
+    {
+      "id": 8,
+      "title": "lord of the rings",
+      "isbn": "43",
+      "description": "",
+      "price": 12,
+      "stock": 0
+    }
+  ],
+  "carts": {
+    "1": []
+  },
+  "orders": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "created_at": "2025-12-14T19:22:31.350Z",
+      "total": 32,
+      "items": [
+        {
+          "book_id": 4,
+          "title": "The Hobbit",
+          "qty": 1,
+          "price": 32
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "user_id": 1,
+      "created_at": "2025-12-14T19:25:00.075Z",
+      "total": 24.5,
+      "items": [
+        {
+          "book_id": 2,
+          "title": "Dracula",
+          "qty": 1,
+          "price": 24.5
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "user_id": 1,
+      "created_at": "2025-12-14T19:27:43.752Z",
+      "total": 24.5,
+      "items": [
+        {
+          "book_id": 2,
+          "title": "Dracula",
+          "qty": 1,
+          "price": 24.5
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "user_id": 1,
+      "created_at": "2025-12-14T19:38:10.711Z",
+      "total": 54.489999999999995,
+      "items": [
+        {
+          "book_id": 1,
+          "title": "Lord of the Rings",
+          "qty": 1,
+          "price": 29.99
+        },
+        {
+          "book_id": 2,
+          "title": "Dracula",
+          "qty": 1,
+          "price": 24.5
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "user_id": 1,
+      "created_at": "2025-12-14T19:38:23.258Z",
+      "total": 51,
+      "items": [
+        {
+          "book_id": 4,
+          "title": "The Hobbit",
+          "qty": 1,
+          "price": 32
+        },
+        {
+          "book_id": 3,
+          "title": "Tom Sayer",
+          "qty": 1,
+          "price": 19
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "user_id": 1,
+      "created_at": "2025-12-14T19:40:29.737Z",
+      "total": 24.5,
+      "items": [
+        {
+          "book_id": 2,
+          "title": "Dracula",
+          "qty": 1,
+          "price": 24.5
+        }
+      ]
+    }
+  ]
+}

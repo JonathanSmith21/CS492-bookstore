@@ -68,10 +68,16 @@
         book.isbn = document.getElementById('edit-isbn').value.trim();
         book.price = parseFloat(document.getElementById('edit-price').value);
         book.desc = document.getElementById('edit-desc').value.trim();
-        saveJSON(inventoryKey,inventory);
-        renderProducts();
-        searchBar.value = '';
-        searchResults.innerHTML = '';
+        const token = localStorage.getItem('cs_customer_token');
+        const user = users.find(u=>u.username===currentUser?.username);
+        if(apiAvailable && token && user && user.admin){
+          fetchWithAuth('/api/inventory/' + String(book.id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:book.title,isbn:book.isbn,description:book.desc,price:book.price,stock:book.stock||0})}).then(()=>{ loadInventoryFromAPI(); searchBar.value = ''; searchResults.innerHTML = ''; }).catch(()=>{ saveJSON(inventoryKey,inventory); renderProducts(); searchBar.value = ''; searchResults.innerHTML = ''; });
+        }else{
+          saveJSON(inventoryKey,inventory);
+          renderProducts();
+          searchBar.value = '';
+          searchResults.innerHTML = '';
+        }
       };
       form.querySelector('#cancel-edit').onclick = function(){ searchBar.value = ''; searchResults.innerHTML = ''; };
       searchResults.appendChild(form);
@@ -95,40 +101,44 @@
   // API base (backend runs on localhost:3001 by default)
   const API_BASE = 'http://localhost:3001';
   let apiAvailable = false;
-  // try health endpoint to detect backend
-  fetch(API_BASE + '/api/health').then(r=>r.json()).then(()=>{ apiAvailable = true; }).catch(()=>{ apiAvailable = false; });
-  fetch('users.json').then(r=>r.json()).then(data=>{users=data;initLogin();}).catch(()=>{users=[];initLogin();});
+  // try health endpoint to detect backend and load remote inventory when available - wait with timeout
+  const healthCheck = fetch(API_BASE + '/api/health', {method:'GET',timeout:3000}).then(r=>r.json()).then(()=>{ apiAvailable = true; loadInventoryFromAPI(); return true; }).catch(()=>{ apiAvailable = false; return false; });
+  fetch('users.json').then(r=>r.json()).then(data=>{users=data;}).catch(()=>{users=[];});
+  
+  // Wait for health check or 3 second timeout before initializing login
+  Promise.race([healthCheck, new Promise(resolve=>setTimeout(resolve,3000))]).then(()=>initLogin());
 
   function initLogin(){
     // Check session
     const u = loadJSON(storage.userKey);
     if(u){currentUser=u;showApp();}else{showLogin();}
-    loginForm.addEventListener('submit',function(e){
+    loginForm.addEventListener('submit',async function(e){
       e.preventDefault();
       const username = document.getElementById('login-username').value.trim();
       const password = document.getElementById('login-password').value;
       loginError.style.display = 'none';
       if(apiAvailable){
-        fetch(API_BASE + '/api/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})})
-          .then(r=>r.json())
-          .then(res=>{
-            if(res && res.ok){
-              currentUser = {username:res.user.username, admin: !!res.user.role && res.user.role==='admin'};
-              saveJSON(storage.userKey,currentUser);
-              if(res.token) localStorage.setItem('cs_customer_token', res.token);
-              // keep local cache up to date
-              if(!users.find(u=>u.username===currentUser.username)) users.push({username:currentUser.username,admin:currentUser.admin});
-              showApp();
-            }else{
-              loginError.textContent = res && res.error ? res.error : 'Invalid username or password.';
-              loginError.style.display = 'block';
-            }
-          }).catch(err=>{
-            // fallback to local
-            const user = users.find(u=>u.username===username && u.password===password);
-            if(user){ currentUser = {username:user.username, admin: !!user.admin}; saveJSON(storage.userKey,currentUser); showApp(); }
-            else{ loginError.textContent = 'Invalid username or password.'; loginError.style.display = 'block'; }
-          });
+        try {
+          const r = await fetch(API_BASE + '/api/login', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+          const res = await r.json();
+          if(res && res.ok){
+            // Store full backend user info
+            currentUser = res.user;
+            saveJSON(storage.userKey,currentUser);
+            if(res.token) localStorage.setItem('cs_customer_token', res.token);
+            // Sync cart from backend after login
+            await syncCartFromServer();
+            showApp();
+          }else{
+            loginError.textContent = res && res.error ? res.error : 'Invalid username or password.';
+            loginError.style.display = 'block';
+          }
+        } catch(err) {
+          // fallback to local
+          const user = users.find(u=>u.username===username && u.password===password);
+          if(user){ currentUser = {username:user.username, admin: !!user.admin}; saveJSON(storage.userKey,currentUser); showApp(); }
+          else{ loginError.textContent = 'Invalid username or password.'; loginError.style.display = 'block'; }
+        }
       }else{
         const user = users.find(u=>u.username===username && u.password===password);
         if(user){ currentUser = {username:user.username, admin: !!user.admin}; saveJSON(storage.userKey,currentUser); showApp(); }
@@ -194,9 +204,8 @@
   function showApp(){
     loginPanel.style.display = 'none';
     appPanel.style.display = 'block';
-    // Show admin panel if admin
-    const user = users.find(u=>u.username===currentUser.username);
-    const isAdmin = user && user.admin;
+    // Always trust backend user info for admin
+    const isAdmin = currentUser && (currentUser.role === 'admin' || currentUser.admin === true);
     document.getElementById('admin-books-panel').style.display = isAdmin ? 'block' : 'none';
     if(isAdmin) renderAdminBooks();
     // Show/hide Reports tab based on admin status
@@ -303,6 +312,36 @@
     return fetch(API_BASE + path, opts);
   }
 
+  // Load inventory from API when available and normalize to local shape
+  async function loadInventoryFromAPI(){
+    try{
+      const resp = await fetch(API_BASE + '/api/inventory');
+      if(!resp.ok) return;
+      const list = await resp.json();
+      // normalize fields: id (string), title, price, desc, isbn
+      inventory = list.map(i=>({id:String(i.id), title:i.title, isbn:i.isbn, price:parseFloat(i.price||0), desc:i.description||'', stock: i.stock}));
+      saveJSON(inventoryKey,inventory);
+      renderProducts();
+      // if logged in, sync cart from server
+      const user = loadJSON(storage.userKey);
+      if(user && localStorage.getItem('cs_customer_token')) await syncCartFromServer();
+    }catch(e){ console.warn('Failed to load inventory from API',e); }
+  }
+
+  // Sync local cart state from server-side cart
+  async function syncCartFromServer(){
+    try{
+      const resp = await fetchWithAuth('/api/cart');
+      if(!resp.ok) return;
+      const rows = await resp.json();
+      // rows: [{book_id,title,price,qty}]
+      cart = {};
+      rows.forEach(r=>{ cart[String(r.book_id)] = r.qty; });
+      saveJSON(storage.cartKey,cart);
+      renderCart();
+    }catch(e){ console.warn('syncCart failed',e); }
+  }
+
   function renderProducts(){
     productsEl.innerHTML='';
     inventory.forEach(p=>{
@@ -330,11 +369,17 @@
     const price = parseFloat(document.getElementById('book-price').value);
     const desc = document.getElementById('book-desc').value.trim();
     if(!title || isNaN(price)) return;
-    const id = 'b'+Math.random().toString(36).slice(2,8);
-    inventory.push({id,isbn,title,price,desc,img:''});
-    saveJSON(inventoryKey,inventory);
-    renderProducts();
-    addBookForm.reset();
+    const token = localStorage.getItem('cs_customer_token');
+    const user = users.find(u=>u.username===currentUser?.username);
+    if(apiAvailable && token && user && user.admin){
+      fetchWithAuth('/api/inventory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,description:desc,isbn,price,stock:0})}).then(r=>r.json()).then(body=>{ if(body && body.ok){ loadInventoryFromAPI(); addBookForm.reset(); } else { alert('Failed to add book'); } }).catch(()=>{ alert('Failed to add book'); });
+    }else{
+      const id = 'b'+Math.random().toString(36).slice(2,8);
+      inventory.push({id,isbn,title,price,desc,img:''});
+      saveJSON(inventoryKey,inventory);
+      renderProducts();
+      addBookForm.reset();
+    }
   });
 
   function renderAdminBooks(){
@@ -348,18 +393,33 @@
       div.style.marginBottom = '4px';
       div.innerHTML = `<span>${escapeHtml(b.title)} ($${b.price.toFixed(2)})<br><span style='font-size:12px;color:#555'>ISBN: ${escapeHtml(b.isbn||'')}</span></span> <button data-i="${i}">Remove</button>`;
       div.querySelector('button').addEventListener('click',function(){
-        inventory.splice(i,1);
-        saveJSON(inventoryKey,inventory);
-        renderProducts();
+        const user = users.find(u=>u.username===currentUser?.username);
+        const token = localStorage.getItem('cs_customer_token');
+        if(apiAvailable && token && user && user.admin){
+          fetchWithAuth('/api/inventory/' + String(b.id),{method:'DELETE'}).then(()=>loadInventoryFromAPI()).catch(()=>{ inventory.splice(i,1); saveJSON(inventoryKey,inventory); renderProducts(); });
+        }else{
+          inventory.splice(i,1);
+          saveJSON(inventoryKey,inventory);
+          renderProducts();
+        }
       });
       adminBooksList.appendChild(div);
     });
   }
 
   function addToCart(id){
-    cart[id] = (cart[id]||0)+1;
-    saveJSON(storage.cartKey,cart);
-    renderCart();
+    // If backend is available and user is authenticated, update server-side cart
+    const token = localStorage.getItem('cs_customer_token');
+    if(apiAvailable && token){
+      fetchWithAuth('/api/cart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({book_id: parseInt(id,10), qty:1})})
+        .then(r=>r.json())
+        .then(()=>syncCartFromServer())
+        .catch(()=>{ cart[id] = (cart[id]||0)+1; saveJSON(storage.cartKey,cart); renderCart(); });
+    }else{
+      cart[id] = (cart[id]||0)+1;
+      saveJSON(storage.cartKey,cart);
+      renderCart();
+    }
   }
 
   function renderCart(){
@@ -382,16 +442,33 @@
 
       right.querySelector('.qty').addEventListener('change',e=>{
         const v = parseInt(e.target.value)||0;
-        if(v<=0) delete cart[id]; else cart[id]=v;
-        saveJSON(storage.cartKey,cart);
-        renderCart();
+        const token = localStorage.getItem('cs_customer_token');
+        if(apiAvailable && token){
+          // update server-side cart
+          fetchWithAuth('/api/cart/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({book_id: parseInt(id,10), qty: v})})
+            .then(r=>r.json()).then(()=>syncCartFromServer()).catch(()=>{ if(v<=0) delete cart[id]; else cart[id]=v; saveJSON(storage.cartKey,cart); renderCart(); });
+        }else{
+          if(v<=0) delete cart[id]; else cart[id]=v;
+          saveJSON(storage.cartKey,cart);
+          renderCart();
+        }
       });
-      right.querySelector('.rm').addEventListener('click',()=>{delete cart[id];saveJSON(storage.cartKey,cart);renderCart();});
+      right.querySelector('.rm').addEventListener('click',()=>{
+        const token = localStorage.getItem('cs_customer_token');
+        if(apiAvailable && token){ fetchWithAuth('/api/cart/update',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({book_id: parseInt(id,10), qty:0})}).then(()=>syncCartFromServer()).catch(()=>{ delete cart[id]; saveJSON(storage.cartKey,cart); renderCart(); }); }
+        else { delete cart[id]; saveJSON(storage.cartKey,cart); renderCart(); }
+      });
     });
     cartTotal.textContent = total.toFixed(2);
   }
 
-  function openCheckout(){
+  async function openCheckout(){
+    // Always sync cart from backend before showing checkout
+    const token = localStorage.getItem('cs_customer_token');
+    if(apiAvailable && token){
+      await syncCartFromServer();
+      await loadInventoryFromAPI && loadInventoryFromAPI();
+    }
     const keys = Object.keys(cart);
     if(keys.length===0){alert('Cart is empty');return}
     orderSummary.innerHTML='';
@@ -420,12 +497,28 @@
       payBtn.disabled = false;
       const approved = true; // always approve in this simple demo
       if(!approved){alert('Payment failed');return}
-      const order = finalizeOrder();
-      checkoutModal.style.display='none';
-      renderCart();
-      renderOrdersList();
-      // generate invoice and open printable view
-      openInvoice(order);
+      // If backend available and authenticated, perform server checkout
+      const token = localStorage.getItem('cs_customer_token');
+      if(apiAvailable && token){
+        fetchWithAuth('/api/checkout',{method:'POST'}).then(r=>r.json()).then(async res=>{
+          if(!res || !res.ok){ alert(res && res.error ? res.error : 'Checkout failed'); return; }
+          checkoutModal.style.display='none';
+          // clear local cart and refresh from server
+          await syncCartFromServer();
+          // fetch order details and render
+          const orderId = res.orderId;
+          const od = await fetchWithAuth('/api/orders/' + orderId).then(r=>r.json()).catch(()=>null);
+          const order = od && od.order ? { id: 'ORD-'+orderId, date: od.order.created_at || new Date().toISOString(), items: (od.items||[]).map(i=>({title:i.title,qty:i.qty,price:i.price})), total: od.order.total } : finalizeOrder();
+          renderCart(); renderOrdersList(); openInvoice(order);
+        }).catch(err=>{ console.error(err); alert('Checkout error'); });
+      }else{
+        const order = finalizeOrder();
+        checkoutModal.style.display='none';
+        renderCart();
+        renderOrdersList();
+        // generate invoice and open printable view
+        openInvoice(order);
+      }
     },600);
   }
 
@@ -458,20 +551,40 @@
 
   function buildInvoiceHTML(order){
     const rows = order.items.map(i=>`<tr><td>${escapeHtml(i.title)}</td><td>${i.qty}</td><td>$${i.price.toFixed(2)}</td><td>$${(i.price*i.qty).toFixed(2)}</td></tr>`).join('');
-    return `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${order.id}</title><style>body{font-family:Arial;padding:18px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:6px}</style></head><body><h2>Invoice</h2><div>Order: ${order.id}</div><div>Date: ${new Date(order.date).toLocaleString()}</div><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Line</th></tr></thead><tbody>${rows}</tbody></table><h3>Total: $${order.total.toFixed(2)}</h3><div><button onclick="window.print()">Print / Save PDF</button> <button onclick="(function(){const s=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const a=document.createElement('a'); a.href=URL.createObjectURL(s); a.download='invoice-${order.id}.html'; a.click(); })()">Download HTML</button></div></body></html>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><title>Invoice ${order.id}</title><style>body{font-family:Arial;padding:18px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #ddd;padding:6px}</style></head><body><h2>Invoice</h2><div>Order: ${order.id}</div><div>Date: ${new Date(order.date).toLocaleString()}</div><table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Line</th></tr></thead><tbody>${rows}</tbody></table><h3>Total: $${order.total.toFixed(2)}</h3><div><button onclick="window.print()">Print / Save PDF</button></div></body></html>`;
   }
 
   function renderOrdersList(){
     const el = document.getElementById('orders-list');
     el.innerHTML='';
-    if(orders.length===0){el.textContent='No orders yet';return}
-    orders.slice().reverse().forEach(o=>{
-      const d = document.createElement('div');d.className='order';
-      d.innerHTML = `<strong>${o.id}</strong> — ${new Date(o.date).toLocaleString()} — $${o.total.toFixed(2)} <button data-id="${o.id}">View</button> <button data-csv="${o.id}">Invoice CSV</button>`;
-      el.appendChild(d);
-      d.querySelector('button[data-id]').addEventListener('click',()=>openInvoice(o));
-      d.querySelector('button[data-csv]').addEventListener('click',()=>downloadOrderCSV(o));
-    });
+    const token = localStorage.getItem('cs_customer_token');
+    if(apiAvailable && token){
+      fetchWithAuth('/api/orders').then(r=>r.json()).then(list=>{
+        if(!Array.isArray(list) || list.length===0){ el.textContent='No orders yet'; return }
+        list.forEach(o=>{
+          const d = document.createElement('div'); d.className='order';
+          d.innerHTML = `<strong>ORD-${o.id}</strong> — ${new Date(o.created_at).toLocaleString()} — $${o.total.toFixed(2)} <button data-id="${o.id}">View</button> <button data-csv="${o.id}">Invoice CSV</button>`;
+          el.appendChild(d);
+          d.querySelector('button[data-id]').addEventListener('click', async ()=>{
+            const od = await fetchWithAuth('/api/orders/' + o.id).then(r=>r.json()).catch(()=>null);
+            if(od && od.order){ const order = { id: 'ORD-'+od.order.id, date: od.order.created_at, items: (od.items||[]).map(i=>({title:i.title,qty:i.qty,price:i.price})), total: od.order.total }; openInvoice(order); }
+          });
+          d.querySelector('button[data-csv]').addEventListener('click', async ()=>{
+            const csvUrl = API_BASE + '/api/reports/daily/export?date=' + (new Date().toISOString().slice(0,10));
+            window.open(csvUrl, '_blank');
+          });
+        });
+      }).catch(()=>{ el.textContent='No orders yet'; });
+    }else{
+      if(orders.length===0){el.textContent='No orders yet';return}
+      orders.slice().reverse().forEach(o=>{
+        const d = document.createElement('div');d.className='order';
+        d.innerHTML = `<strong>${o.id}</strong> — ${new Date(o.date).toLocaleString()} — $${o.total.toFixed(2)} <button data-id="${o.id}">View</button> <button data-csv="${o.id}">Invoice CSV</button>`;
+        el.appendChild(d);
+        d.querySelector('button[data-id]').addEventListener('click',()=>openInvoice(o));
+        d.querySelector('button[data-csv]').addEventListener('click',()=>downloadOrderCSV(o));
+      });
+    }
   }
 
   function downloadOrderCSV(order){
@@ -501,22 +614,38 @@
     if(!user || !user.admin){alert('Not authorized');return}
     const dateInput = document.getElementById('report-date').value;
     if(!dateInput){alert('Pick a date');return}
-    const dayStart = new Date(dateInput); dayStart.setHours(0,0,0,0);
-    const dayEnd = new Date(dateInput); dayEnd.setHours(23,59,59,999);
-    const dayOrders = orders.filter(o=>{const d=new Date(o.date);return d>=dayStart && d<=dayEnd});
-    const totals = dayOrders.reduce((s,o)=>s+o.total,0);
-    const itemMap = {};
-    dayOrders.forEach(o=>o.items.forEach(i=>{itemMap[i.title]=(itemMap[i.title]||0)+i.qty}));
-    const top = Object.entries(itemMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    const token = localStorage.getItem('cs_customer_token');
     const out = document.getElementById('report-results');
-    out.innerHTML = `<div><strong>Orders:</strong> ${dayOrders.length}</div><div><strong>Total Sales:</strong> $${totals.toFixed(2)}</div><div><strong>Top Sellers:</strong><ol>${top.map(t=>`<li>${escapeHtml(t[0])} — ${t[1]}</li>`).join('')}</ol></div>`;
-    currentReport = {date:dateInput,orders:dayOrders,totals,itemMap,top};
+    if(apiAvailable && token){
+      fetchWithAuth('/api/reports/daily?date=' + dateInput).then(r=>r.json()).then(body=>{
+        if(!body || body.error){ alert(body && body.error ? body.error : 'Failed to run report'); return; }
+        out.innerHTML = `<div><strong>Orders:</strong> ${body.orders.length}</div><div><strong>Total Sales:</strong> $${(body.totals||0).toFixed(2)}</div><div><strong>Top Sellers:</strong><ol>${(body.top||[]).map(t=>`<li>${escapeHtml(t[0])} — ${t[1]}</li>`).join('')}</ol></div>`;
+        currentReport = {date:dateInput,orders:body.orders,totals:body.totals||0,itemMap:body.top||[],top:body.top||[]};
+      }).catch(err=>{ console.error(err); alert('Report failed'); });
+    }else{
+      const dayStart = new Date(dateInput); dayStart.setHours(0,0,0,0);
+      const dayEnd = new Date(dateInput); dayEnd.setHours(23,59,59,999);
+      const dayOrders = orders.filter(o=>{const d=new Date(o.date);return d>=dayStart && d<=dayEnd});
+      const totals = dayOrders.reduce((s,o)=>s+o.total,0);
+      const itemMap = {};
+      dayOrders.forEach(o=>o.items.forEach(i=>{itemMap[i.title]=(itemMap[i.title]||0)+i.qty}));
+      const top = Object.entries(itemMap).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const out = document.getElementById('report-results');
+      out.innerHTML = `<div><strong>Orders:</strong> ${dayOrders.length}</div><div><strong>Total Sales:</strong> $${totals.toFixed(2)}</div><div><strong>Top Sellers:</strong><ol>${top.map(t=>`<li>${escapeHtml(t[0])} — ${t[1]}</li>`).join('')}</ol></div>`;
+      currentReport = {date:dateInput,orders:dayOrders,totals,itemMap,top};
+    }
   }
 
   function exportReportCSV(){
     const user = users.find(u=>u.username===currentUser?.username);
     if(!user || !user.admin){alert('Not authorized');return}
     if(!currentReport){alert('Run report first');return}
+    const token = localStorage.getItem('cs_customer_token');
+    if(apiAvailable && token){
+      // open server CSV export endpoint
+      window.open(API_BASE + '/api/reports/daily/export?date=' + currentReport.date, '_blank');
+      return;
+    }
     const rows = [['Date','OrderID','Item','Qty','Price','Line']];
     currentReport.orders.forEach(o=>o.items.forEach(i=>rows.push([currentReport.date,o.id,i.title,i.qty,i.price,(i.price*i.qty).toFixed(2)])));
     const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -528,6 +657,12 @@
     const user = users.find(u=>u.username===currentUser?.username);
     if(!user || !user.admin){alert('Not authorized');return}
     if(!currentReport){alert('Run report first');return}
+    const token = localStorage.getItem('cs_customer_token');
+    if(apiAvailable && token){
+      // open server CSV export in a new tab (user can print there)
+      window.open(API_BASE + '/api/reports/daily/export?date=' + currentReport.date, '_blank');
+      return;
+    }
     const w = window.open('','_blank');
     const rows = currentReport.orders.map(o=>`<tr><td>${o.id}</td><td>${new Date(o.date).toLocaleString()}</td><td>${o.items.map(i=>escapeHtml(i.title)+' x'+i.qty).join('<br>')}</td><td>$${o.total.toFixed(2)}</td></tr>`).join('');
     const html = `<!doctype html><html><head><meta charset="utf-8"><title>Report ${currentReport.date}</title><style>body{font-family:Arial;padding:18px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px}</style></head><body><h2>Report ${currentReport.date}</h2><div><strong>Total Sales:</strong> $${currentReport.totals.toFixed(2)}</div><table><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div><button onclick="window.print()">Print / Save PDF</button></div></body></html>`;

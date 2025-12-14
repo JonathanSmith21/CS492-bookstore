@@ -1,4 +1,4 @@
 [
-  { "username": "admin", "password": "password123", "admin": true },
+  { "username": "admin", "password": "adminpass", "admin": true },
   { "username": "client", "password": "letmein" }
 ]
