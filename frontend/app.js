@@ -1,3 +1,16 @@
+  function reportPDF(){
+    const user = users.find(u=>u.username===currentUser?.username);
+    if(!user || !user.admin){alert('Not authorized');return}
+    if(!currentReport){alert('Run report first');return}
+    // Build HTML for the report
+    const w = window.open('','_blank');
+    const rows = currentReport.orders.map(o=>
+      `<tr><td>${o.id}</td><td>${new Date(o.created_at||o.date).toLocaleString()}</td><td>$${o.total.toFixed(2)}</td></tr>`
+    ).join('');
+    const topSellers = (currentReport.top||[]).map(t=>`<li>${escapeHtml(t[0])} — ${t[1]}</li>`).join('');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Report ${currentReport.date}</title><style>body{font-family:Arial;padding:18px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px}h2{margin-bottom:0}ol{margin-top:0}</style></head><body><h2>Daily Sales Report</h2><div>Date: ${currentReport.date}</div><div><strong>Total Sales:</strong> $${currentReport.totals.toFixed(2)}</div><div><strong>Orders:</strong> ${currentReport.orders.length}</div><div><strong>Top Sellers:</strong><ol>${topSellers}</ol></div><table><thead><tr><th>Order</th><th>Date</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div><button onclick="window.print()">Print / Save PDF</button></div></body></html>`;
+    w.document.write(html);w.document.close();
+  }
 // Minimal storefront app using localStorage for persistence.
 (function(){
     // --- SEARCH FEATURE ---
@@ -60,6 +73,7 @@
         <label>Title<br><input type='text' id='edit-title' value='${escapeHtml(book.title)}' style='width:80%'></label><br>
         <label>ISBN<br><input type='text' id='edit-isbn' value='${escapeHtml(book.isbn||'')}' style='width:60%'></label><br>
         <label>Price<br><input type='number' id='edit-price' value='${book.price}' min='0' step='0.01' style='width:40%'></label><br>
+        <label>Stock<br><input type='number' id='edit-stock' value='${book.stock||1}' min='1' step='1' style='width:30%'></label><br>
         <label>Description<br><input type='text' id='edit-desc' value='${escapeHtml(book.desc)}' style='width:80%'></label><br>
         <button type='submit'>Save</button> <button type='button' id='cancel-edit'>Cancel</button>`;
       form.onsubmit = function(e){
@@ -67,11 +81,18 @@
         book.title = document.getElementById('edit-title').value.trim();
         book.isbn = document.getElementById('edit-isbn').value.trim();
         book.price = parseFloat(document.getElementById('edit-price').value);
+        book.stock = parseInt(document.getElementById('edit-stock').value, 10);
         book.desc = document.getElementById('edit-desc').value.trim();
+        if(isNaN(book.stock) || book.stock < 1) { alert('Stock must be at least 1'); return; }
         const token = localStorage.getItem('cs_customer_token');
         const user = users.find(u=>u.username===currentUser?.username);
         if(apiAvailable && token && user && user.admin){
-          fetchWithAuth('/api/inventory/' + String(book.id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:book.title,isbn:book.isbn,description:book.desc,price:book.price,stock:book.stock||0})}).then(()=>{ loadInventoryFromAPI(); searchBar.value = ''; searchResults.innerHTML = ''; }).catch(()=>{ saveJSON(inventoryKey,inventory); renderProducts(); searchBar.value = ''; searchResults.innerHTML = ''; });
+          fetchWithAuth('/api/inventory/' + String(book.id),{
+            method:'PUT',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({title:book.title,isbn:book.isbn,description:book.desc,price:book.price,stock:book.stock})
+          }).then(()=>{ loadInventoryFromAPI(); searchBar.value = ''; searchResults.innerHTML = ''; })
+            .catch(()=>{ saveJSON(inventoryKey,inventory); renderProducts(); searchBar.value = ''; searchResults.innerHTML = ''; });
         }else{
           saveJSON(inventoryKey,inventory);
           renderProducts();
@@ -262,8 +283,9 @@
   document.getElementById('export-orders-csv').addEventListener('click',exportOrdersCSV);
   document.getElementById('clear-orders').addEventListener('click',clearOrders);
   document.getElementById('run-report').addEventListener('click',runReport);
-  document.getElementById('export-report-csv').addEventListener('click',exportReportCSV);
-  document.getElementById('print-report').addEventListener('click',printReport);
+  // Removed export-report-csv button and logic
+  // Removed print-report button and logic
+  document.getElementById('report-pdf').addEventListener('click',reportPDF);
 
   renderProducts();
   renderCart();
@@ -367,15 +389,23 @@
     const title = document.getElementById('book-title').value.trim();
     const isbn = document.getElementById('book-isbn').value.trim();
     const price = parseFloat(document.getElementById('book-price').value);
+    const stock = parseInt(document.getElementById('book-stock').value, 10);
     const desc = document.getElementById('book-desc').value.trim();
-    if(!title || isNaN(price)) return;
+    if(!title || isNaN(price) || isNaN(stock) || stock < 1) return;
     const token = localStorage.getItem('cs_customer_token');
     const user = users.find(u=>u.username===currentUser?.username);
     if(apiAvailable && token && user && user.admin){
-      fetchWithAuth('/api/inventory',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,description:desc,isbn,price,stock:0})}).then(r=>r.json()).then(body=>{ if(body && body.ok){ loadInventoryFromAPI(); addBookForm.reset(); } else { alert('Failed to add book'); } }).catch(()=>{ alert('Failed to add book'); });
+      fetchWithAuth('/api/inventory',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({title,description:desc,isbn,price,stock})
+      }).then(r=>r.json()).then(body=>{
+        if(body && body.ok){ loadInventoryFromAPI(); addBookForm.reset(); }
+        else { alert('Failed to add book'); }
+      }).catch(()=>{ alert('Failed to add book'); });
     }else{
       const id = 'b'+Math.random().toString(36).slice(2,8);
-      inventory.push({id,isbn,title,price,desc,img:''});
+      inventory.push({id,isbn,title,price,stock,desc,img:''});
       saveJSON(inventoryKey,inventory);
       renderProducts();
       addBookForm.reset();
@@ -612,8 +642,12 @@
   function runReport(){
     const user = users.find(u=>u.username===currentUser?.username);
     if(!user || !user.admin){alert('Not authorized');return}
-    const dateInput = document.getElementById('report-date').value;
+    let dateInput = document.getElementById('report-date').value;
     if(!dateInput){alert('Pick a date');return}
+    // Convert to UTC YYYY-MM-DD to match backend order timestamps
+    const dateObj = new Date(dateInput);
+    const utcDate = dateObj.getUTCFullYear() + '-' + String(dateObj.getUTCMonth()+1).padStart(2,'0') + '-' + String(dateObj.getUTCDate()).padStart(2,'0');
+    dateInput = utcDate;
     const token = localStorage.getItem('cs_customer_token');
     const out = document.getElementById('report-results');
     if(apiAvailable && token){
@@ -636,38 +670,9 @@
     }
   }
 
-  function exportReportCSV(){
-    const user = users.find(u=>u.username===currentUser?.username);
-    if(!user || !user.admin){alert('Not authorized');return}
-    if(!currentReport){alert('Run report first');return}
-    const token = localStorage.getItem('cs_customer_token');
-    if(apiAvailable && token){
-      // open server CSV export endpoint
-      window.open(API_BASE + '/api/reports/daily/export?date=' + currentReport.date, '_blank');
-      return;
-    }
-    const rows = [['Date','OrderID','Item','Qty','Price','Line']];
-    currentReport.orders.forEach(o=>o.items.forEach(i=>rows.push([currentReport.date,o.id,i.title,i.qty,i.price,(i.price*i.qty).toFixed(2)])));
-    const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv],{type:'text/csv'});
-    const a = document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`report-${currentReport.date}.csv`;a.click();
-  }
+  // Removed exportReportCSV function
 
-  function printReport(){
-    const user = users.find(u=>u.username===currentUser?.username);
-    if(!user || !user.admin){alert('Not authorized');return}
-    if(!currentReport){alert('Run report first');return}
-    const token = localStorage.getItem('cs_customer_token');
-    if(apiAvailable && token){
-      // open server CSV export in a new tab (user can print there)
-      window.open(API_BASE + '/api/reports/daily/export?date=' + currentReport.date, '_blank');
-      return;
-    }
-    const w = window.open('','_blank');
-    const rows = currentReport.orders.map(o=>`<tr><td>${o.id}</td><td>${new Date(o.date).toLocaleString()}</td><td>${o.items.map(i=>escapeHtml(i.title)+' x'+i.qty).join('<br>')}</td><td>$${o.total.toFixed(2)}</td></tr>`).join('');
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Report ${currentReport.date}</title><style>body{font-family:Arial;padding:18px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ddd;padding:6px}</style></head><body><h2>Report ${currentReport.date}</h2><div><strong>Total Sales:</strong> $${currentReport.totals.toFixed(2)}</div><table><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table><div><button onclick="window.print()">Print / Save PDF</button></div></body></html>`;
-    w.document.write(html);w.document.close();
-  }
+  // Removed printReport function
 
   function showTab(name){
     document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.id===('tab-'+name)));

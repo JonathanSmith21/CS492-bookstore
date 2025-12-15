@@ -50,9 +50,10 @@
           <div id="admin-books-panel" style="display:none;margin-top:24px;padding:16px;background:#fff;border-radius:8px;box-shadow:0 2px 8px #0001;max-width:400px">
             <h3>Manage Books (Admin)</h3>
             <form id="add-book-form" style="margin-bottom:12px">
-              <input type="text" id="book-title" placeholder="Title" required style="width:32%"> 
-              <input type="text" id="book-isbn" placeholder="ISBN" style="width:24%"> 
-              <input type="number" id="book-price" placeholder="Price" required min="0" step="0.01" style="width:20%"> 
+              <input type="text" id="book-title" placeholder="Title" required style="width:24%"> 
+              <input type="text" id="book-isbn" placeholder="ISBN" style="width:16%"> 
+              <input type="number" id="book-price" placeholder="Price" required min="0" step="0.01" style="width:14%"> 
+              <input type="number" id="book-stock" placeholder="Stock" required min="1" step="1" style="width:10%"> 
               <input type="text" id="book-desc" placeholder="Description" style="width:20%"> 
               <button type="submit">Add Book</button>
             </form>
@@ -84,8 +85,7 @@
         <button id="run-report">Run</button>
         <div id="report-results" style="margin-top:12px"></div>
         <div style="margin-top:12px">
-          <button id="export-report-csv">Export Report CSV</button>
-          <button id="print-report">Print Report</button>
+          <button id="report-pdf">Report PDF</button>
         </div>
       </section>
     </main>

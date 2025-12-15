@@ -86,7 +86,7 @@ This will install all dependencies
 ### Running the Server
 
 ```powershell
-npm start
+cd frontend/backend; npm start
 #this will start the server
 ```
 
