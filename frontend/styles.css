@@ -75,15 +75,26 @@ main {
   display: flex;
   gap: 20px;
   align-items: flex-start;
+  width: 100%;
+}
+
+.shop-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 320px;
+  flex-shrink: 0;
+  order: 2;
 }
 
 .shop-content {
   flex: 1;
+  order: 1;
 }
 
 .products {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
 

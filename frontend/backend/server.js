@@ -71,7 +71,7 @@ app.post('/api/register', authLimiter, async (req,res)=>{
     if(exists) return res.status(409).json({error:'username exists'});
     const hash = bcrypt.hashSync(password,10);
     const id = (Math.max(...db.data.users.map(u=>u.id),0)+1);
-    const user = {id,username,role:'user',mfa_enabled:0,mfa_secret:null,created_at:new Date().toISOString()};
+    const user = {id,username,password_hash:hash,role:'user',mfa_enabled:0,mfa_secret:null,created_at:new Date().toISOString()};
     db.data.users.push(user);
     await db.write();
     const token = generateToken({id:user.id,username,role:'user'});
@@ -87,26 +87,43 @@ app.post('/api/login', authLimiter, async (req,res)=>{
     const row = db.data.users.find(u=>u.username===username);
     if(!row || !row.password_hash) return res.status(401).json({error:'invalid credentials'});
     if(!bcrypt.compareSync(password,row.password_hash)) return res.status(401).json({error:'invalid credentials'});
-    if(row.mfa_enabled){ if(!totp) return res.status(400).json({error:'totp required'}); const ok= speakeasy.totp.verify({secret:row.mfa_secret,encoding:'base32',token:totp,window:1}); if(!ok) return res.status(401).json({error:'invalid totp'}); }
+    if(row.mfa_enabled){ if(!totp) return res.status(400).json({error:'totp required'}); if(totp !== row.mfa_secret) return res.status(401).json({error:'invalid totp'}); }
     const user = {id:row.id,username:row.username,role:row.role};
     const token = generateToken(user);
     return res.json({ok:true,user,token});
   }catch(e){ console.error(e); return res.status(500).json({error:'server error'}); }
 });
 
-// MFA setup (requires auth)
+// MFA setup (requires auth) - generates a 4-digit code
 app.post('/api/mfa/setup', requireAuth, async (req,res)=>{
   try{
-    const secret = speakeasy.generateSecret({name:`BMS (${req.user.username})`,length:20});
-    const otpauth = secret.otpauth_url;
-    qrcode.toDataURL(otpauth).then(qr=>res.json({ok:true,secret:secret.base32,qr})).catch(e=>{console.error(e);res.status(500).json({error:'qr failed'})});
-  }catch(e){console.error(e);res.status(500).json({error:'server error'});} 
+    const code = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+    console.log('[MFA Setup] User:', req.user.username, 'Code:', code);
+    const user = db.data.users.find(u=>u.id===req.user.id);
+    if(!user) return res.status(404).json({error:'user not found'});
+    user.mfa_pending_code = code;
+    await db.write();
+    console.log('[MFA Setup] Code saved for user:', req.user.username);
+    return res.json({ok:true,code});
+  }catch(e){
+    console.error('[MFA Setup] Error:', e);
+    return res.status(500).json({error:'server error'});
+  }
 });
 
-// MFA confirm
+// MFA confirm - verify the 4-digit code matches and enable MFA
 app.post('/api/mfa/confirm', requireAuth, async (req,res)=>{
-  const {secret,token} = req.body||{}; if(!secret||!token) return res.status(400).json({error:'secret and token required'});
-  try{ const ok = speakeasy.totp.verify({secret,encoding:'base32',token,window:1}); if(!ok) return res.status(400).json({error:'invalid token'}); const user = db.data.users.find(u=>u.id===req.user.id); if(user){ user.mfa_enabled=1; user.mfa_secret=secret; await db.write(); } return res.json({ok:true}); }catch(e){console.error(e);return res.status(500).json({error:'server error'});} 
+  const {code} = req.body||{}; if(!code) return res.status(400).json({error:'code required'});
+  try{
+    const user = db.data.users.find(u=>u.id===req.user.id);
+    if(!user) return res.status(404).json({error:'user not found'});
+    if(code !== user.mfa_pending_code) return res.status(400).json({error:'invalid code'});
+    user.mfa_enabled = 1;
+    user.mfa_secret = code;
+    user.mfa_pending_code = null;
+    await db.write();
+    return res.json({ok:true});
+  }catch(e){console.error(e);return res.status(500).json({error:'server error'});}
 });
 
 // Inventory endpoints
@@ -183,6 +200,13 @@ app.post('/api/checkout', requireAuth, async (req,res)=>{
 app.get('/api/orders', requireAuth, async (req,res)=>{ const orders = db.data.orders.filter(o=>o.user_id===req.user.id).map(o=>({id:o.id,created_at:o.created_at,total:o.total})).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)); res.json(orders); });
 app.get('/api/orders/:id', requireAuth, async (req,res)=>{ const id=parseInt(req.params.id,10); const order = db.data.orders.find(o=>o.id===id); if(!order) return res.status(404).json({error:'not found'}); const items = order.items || []; res.json({order:{id:order.id,created_at:order.created_at,total:order.total},items}); });
 app.get('/api/admin/orders', requireAuth, requireRole('admin'), async (req,res)=>{ const orders = db.data.orders.map(o=>({id:o.id,user_id:o.user_id,created_at:o.created_at,total:o.total})).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)); res.json(orders); });
+
+// Admin: clear all orders
+app.post('/api/admin/orders/clear', requireAuth, requireRole('admin'), async (req,res)=>{
+  db.data.orders = [];
+  await db.write();
+  res.json({ok:true});
+});
 
 // Reports: daily sales
 app.get('/api/reports/daily', requireAuth, requireRole('admin'), async (req,res)=>{
